@@ -151,7 +151,7 @@ layout: null
       {% assign items = site.data.news | sort: 'date' | reverse %}
       {% for item in items %}
       <article class="news-item">
-        <div class="news-date">{{ item.date }}</div>
+        <div class="news-date">{{ item.date | date: "%Y-%m-%d %H:%M" }}</div>
         <h2 class="news-title">{{ item.title }}</h2>
         <div class="news-text">{{ item.text }}</div>
         {% if item.tags %}
