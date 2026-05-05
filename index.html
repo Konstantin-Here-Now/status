@@ -1,0 +1,197 @@
+---
+layout: null
+---
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Статус сервера</title>
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --card: #ffffff;
+      --text: #171717;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --warn: #92400e;
+      --warn-bg: #fef3c7;
+      --shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .wrap {
+      width: min(760px, calc(100% - 24px));
+      margin: 20px auto;
+    }
+    .top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .label {
+      font-size: 12px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #9ca3af;
+      flex: 0 0 auto;
+    }
+    .mail {
+      display: inline-block;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .mail:hover { border-color: var(--text); }
+    .news {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .news-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .news-date {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .news-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+    .news-text {
+      white-space: pre-line;
+    }
+    .tags {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+    .ok .dot { background: var(--ok); }
+    .ok .badge { color: var(--ok); background: var(--ok-bg); }
+    .warn .dot { background: var(--warn); }
+    .warn .badge { color: var(--warn); background: var(--warn-bg); }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    @media (max-width: 640px) {
+      .wrap { width: min(760px, calc(100% - 16px)); margin: 8px auto 16px; }
+      .top { grid-template-columns: 1fr; gap: 8px; }
+      .card, .news-item { border-radius: 10px; }
+      .news-title { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="top">
+      <div class="card" id="status-card">
+        <div class="label">Состояние сервера</div>
+        <div class="status-line"><span class="dot"></span><span id="status-text">Проверка…</span></div>
+      </div>
+
+      <div class="card">
+        <div class="label">Связаться со мной</div>
+        <a class="mail" href="mailto:riabtsewkonst@gmail.com">riabtsewkonst@gmail.com</a>
+      </div>
+    </section>
+
+    <section class="news">
+      {% assign items = site.data.news | sort: 'date' | reverse %}
+      {% for item in items %}
+      <article class="news-item">
+        <div class="news-date">{{ item.date }}</div>
+        <h2 class="news-title">{{ item.title }}</h2>
+        <div class="news-text">{{ item.text }}</div>
+        {% if item.tags %}
+        <div class="tags">
+          {% for tag in item.tags %}
+          <span class="tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <script>
+    const STATUS_URL = 'https://conn.krslf.com:9399/healthz';
+    const statusCard = document.getElementById('status-card');
+    const statusText = document.getElementById('status-text');
+
+    async function checkStatus() {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const res = await fetch(STATUS_URL, { cache: 'no-store', signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('bad status');
+        const data = await res.json();
+        if (data && data.ok === true) {
+          statusCard.classList.remove('warn');
+          statusCard.classList.add('ok');
+          statusText.innerHTML = 'Доступен <span class="badge">OK</span>';
+        } else {
+          throw new Error('not ok');
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        statusCard.classList.remove('ok');
+        statusCard.classList.add('warn');
+        statusText.innerHTML = 'Недоступен <span class="badge">ERR</span>';
+      }
+    }
+    checkStatus();
+  </script>
+</body>
+</html>
